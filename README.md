@@ -33,4 +33,5 @@ Next (in this order):
 *  additional features
 *  additional model (maybe)
 
+[update mar 29: i have identified the problem that impedes better prediction: massive one-off items concentrated in the stores that i expected. i will take care of them now]
 
