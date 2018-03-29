@@ -37,7 +37,8 @@ def get_data():
 
   
     #REPLACE DATE STRING WITH DATETIME
-    transactions['date'] = pd.Series([datetime.strptime(d, '%d.%m.%Y') for d in transactions['date']])
+    transactions['date'] = pd.Series([datetime.strptime(d, '%d.%m.%Y') for d 
+                in transactions['date']])
     #transactions['day'] = pd.Series([t.day for t in transactions['date']])
     transactions['month'] = pd.Series([t.month for t in transactions['date']])
     #transactions['year'] = pd.Series([t.year for t in transactions['date']])
@@ -88,15 +89,18 @@ def get_all_data():
     grid_right = test[['shop_id', 'item_id']]
     #this is required to replicate the content of submission. putting all permutations
     #under 33 allows to build the time series for the combinations of interest
-    grid_right['date_block_num'] = 33
+    grid_right['date_block_num'] = 34
     grid_construct = pd.merge(grid_left, grid_right, how = 'outer', on=['shop_id', 'item_id', 
                     'date_block_num']).drop_duplicates()
     
     grid = [] 
     for block_num in grid_construct['date_block_num'].unique():
-        cur_shops = grid_construct.loc[grid_construct['date_block_num'] == block_num, 'shop_id'].unique()
-        cur_items = grid_construct.loc[grid_construct['date_block_num'] == block_num, 'item_id'].unique()
-        grid.append(np.array(list(product(*[cur_shops, cur_items, [block_num]])),dtype='int32'))
+        cur_shops = grid_construct.loc[grid_construct['date_block_num'] == 
+                                       block_num, 'shop_id'].unique()
+        cur_items = grid_construct.loc[grid_construct['date_block_num'] == 
+                                       block_num, 'item_id'].unique()
+        grid.append(np.array(list(product(*[cur_shops, cur_items, 
+                                            [block_num]])),dtype='int32'))
 
     # Turn the grid into a dataframe
     grid = pd.DataFrame(np.vstack(grid), columns = index_cols,dtype=np.int32)
@@ -169,7 +173,8 @@ def clean_price(all_data):
         gc = all_data[price_col_list[i]] / all_data[price_col_list[i+1]]
         gc = gc.rename('price_diff_' + str(i))
         gc = gc.replace([np.inf, -np.inf], np.nan)
-        all_data = pd.merge(all_data, gc.to_frame(), how='left',  left_index = True, right_index = True).fillna(0)
+        all_data = pd.merge(all_data, gc.to_frame(), how='left',  
+                            left_index = True, right_index = True).fillna(0)
 
 
     #drop undesired time and time_diff columns
@@ -231,8 +236,9 @@ def add_solitary_features(all_data):
 def prepare_tt_sets(all_data, dates, last_block):
 
 
-    y_train = all_data.loc[dates <  last_block, 'target'].values
-    y_test =  all_data.loc[dates == last_block, 'target'].values
+    y_train = all_data.loc[dates <  (last_block-1), 'target'].values
+    y_test =  all_data.loc[dates == (last_block-1), 'target'].values
+    
 
     #y_test12 =  all_data.loc[dates == last_block]
 
@@ -242,33 +248,14 @@ def prepare_tt_sets(all_data, dates, last_block):
     replace_col_names = list(all_data)
     all_data_scaled.columns = replace_col_names
 
-    X_train = all_data_scaled.loc[dates <  last_block].drop(to_drop_cols, axis=1)
-    X_test =  all_data_scaled.loc[dates == last_block].drop(to_drop_cols, axis=1)
+    X_train = all_data_scaled.loc[dates <  (last_block-1)].drop(to_drop_cols, axis=1)
+    X_test =  all_data_scaled.loc[dates == (last_block-1)].drop(to_drop_cols, axis=1)
+    X_to_predict = all_data_scaled.loc[dates == last_block].drop(to_drop_cols, axis=1)
 
     #y_test12 = all_data12['target'].values
     #X_test12 = all_data12.drop(to_drop_cols, axis=1)
 
-    return X_train,X_test,y_train,y_test
-
-
-#this works in a similar fashion to prepare_tt_sets, but does not split into
-#training and testng. The purpose is to predict the test set combinations based on 
-#models and parameters selected during the model development stage on the full set
-def prepare_final_set(all_data):
-     
-    y_train = all_data['target'].values
-    
-    all_data_scaled = preprocessing.scale(all_data)
-    all_data_scaled = pd.DataFrame(all_data_scaled)
-    replace_col_names = list(all_data)
-    all_data_scaled.columns = replace_col_names
-    
-    X_train = all_data_scaled.drop(to_drop_cols, axis=1)
-    
-    select_pred = all_data.index[all_data['date_block_num'] == 33]
-    X_pred = all_data_scaled.loc[select_pred].drop(to_drop_cols, axis=1)
-    
-    return X_train, y_train, X_pred
+    return X_train,X_test,y_train,y_test, X_to_predict
 
 
 
@@ -278,8 +265,11 @@ transactions, items, test = get_data()
 
 #select desired stores from the options below or another combination:
 #this excludes stores that tend to ubalance the set
-sales = transactions[transactions['shop_id'].isin([24,58,15,26,7,38,19,21,43,56,16,29,53,14,30,41,37,59,52,2,45,4,5,44,3,17,48,51,49,10,39,34,0,20,13,33,32,23,40,1,8,11,36,6,18,25, 27, 28,31,35,42,46,47,50,54,57])]
-sales = transactions[~transactions['shop_id'].isin([12,22,9,55])]
+#in this case, build a full data set that can be updated with data prediction segments as needed
+#sales = transactions[~transactions['shop_id'].isin([9])] #shop 9 is not in the test set for submissiona and is bad => drop
+sales = transactions
+#sales = transactions[transactions['shop_id'].isin([24,58,15,26,7,38,19,21,43,56,16,29,53,14,30,41,37,59,52,2,45,4,5,44,3,17,48,51,49,10,39,34,0,20,13,33,32,23,40,1,8,11,36,6,18,25, 27, 28,31,35,42,46,47,50,54,57])]
+#sales = transactions[~transactions['shop_id'].isin([12,22,9,55])]
 #this subset gives high predictability
 #sales = transactions[transactions['shop_id'].isin([31,25,28,42,54,27,57,6,18,50,47,46,35])]
 #this is the cluster around shop12 suggested by tSNE
@@ -328,7 +318,290 @@ last_block = dates.max()
 print('Test `date_block_num` is %d' % last_block)
 
 
-X_train,X_test,y_train,y_test = prepare_tt_sets(all_data, dates, last_block)
+X_train,X_test,y_train,y_test, X_to_predict = prepare_tt_sets(all_data, dates, last_block)
+
+#!!!this is where insert is made this is a catch-all prediction based on the full data set
+#load X and y
+#X_train_segm, y_train_segm, X_to_predict = prepare_final_set(all_data)
+
+#RUN LINEAR REGRESSION
+lr = LinearRegression()
+lr.fit(X_train.values, y_train)
+pred_lr_test = lr.predict(X_test.values)
+pred_lr_train = lr.predict(X_train.values)
+
+print('Train R-squared for linreg is %f' % r2_score(y_train, pred_lr_train))
+print('Test R-squared for linreg is %f' % r2_score(y_test, pred_lr_test))
+mean_squared_error(y_test, pred_lr_test)
+
+
+
+lgb_params = {
+               'feature_fraction': 0.3,
+               'metric': 'rmse',
+               'nthread':1, 
+               'min_data_in_leaf': 1, 
+               'bagging_fraction': 0.3, 
+               'learning_rate': 0.03, 
+               'objective': 'mse', 
+               'bagging_seed': 2**7, 
+               'num_leaves': 2**7,
+               'bagging_freq':1,
+               'verbose':0,
+               'num_iterations':130,
+               'max_depth':11
+              }
+
+#fine-tuned predictions for data segments will be done below
+model = lgb.train(lgb_params, lgb.Dataset(X_train, label=y_train), 100)
+pred_lgb_train = model.predict(X_train)
+pred_lgb_test = model.predict(X_test)
+
+print('Train R-squared for LightGBM is %f' % r2_score(y_train, pred_lgb_train))
+print('Test R-squared for LightGBM is %f' % r2_score(y_test, pred_lgb_test))
+mean_squared_error(y_test, pred_lgb_test)
+
+
+#concatenate test predictions for meta featrues testing
+X_test_level2 = np.c_[pred_lr_test, pred_lgb_test]
+
+#get predictins from models for months 27-32 using same parameters.
+dates_train = dates[dates <  (last_block-1)]
+dates_test  = dates[dates == (last_block-1)]
+dates_train_level2 = dates_train[dates_train.isin([27, 28, 29, 30, 31, 32])]
+
+# That is how we get target for the 2nd level dataset
+y_train_level2 = y_train[dates_train.isin([27, 28, 29, 30, 31, 32])]
+
+
+# Prepare 2nd level feeature matrix, init it with zeros first
+X_train_level2 = np.zeros([y_train_level2.shape[0], 2])
+
+
+# fill `X_train_level2` with metafeatures
+    
+for cur_block_num in [27, 28, 29, 30, 31, 32]:
+    
+    print(cur_block_num)
+    
+    '''
+        1. Split `X_train` into parts
+           Remember, that corresponding dates are stored in `dates_train` 
+        2. Fit linear regression 
+        3. Fit LightGBM and put predictions          
+        4. Store predictions from 2. and 3. in the right place of `X_train_level2`. 
+           You can use `dates_train_level2` for it
+           Make sure the order of the meta-features is the same as in `X_test_level2`
+    '''      
+    
+    X_train_block = X_train[dates_train < cur_block_num]
+    y_train_block = y_train[dates_train < cur_block_num]
+    X_test_block = X_train[dates_train == cur_block_num]
+    y_test_block = y_train[dates_train == cur_block_num]
+
+    lr.fit(X_train_block.values, y_train_block)
+    pred_lr = lr.predict(X_test_block.values)
+    print('Test R-squared for linreg is %f' % r2_score(y_test_block, pred_lr))
+
+    model = lgb.train(lgb_params, lgb.Dataset(X_train_block.values, label=y_train_block), 100)
+    pred_lgb = model.predict(X_test_block.values)
+
+    print('Test R-squared for LightGBM is %f' % r2_score(y_test_block, pred_lgb))
+
+    X_train_level2[dates_train_level2==cur_block_num] = np.c_[pred_lr, pred_lgb]
+
+
+print(X_train_level2.mean(axis=0))
+
+
+
+
+xarray = range(len(X_test_level2))
+yarray = range(0,25)
+plt.scatter(x = xarray, y = X_test_level2[:,0])
+plt.scatter(x = xarray, y = X_test_level2[:,1])
+plt.ylim(-1, 10)
+
+
+#linear model mix
+alphas_to_try = np.linspace(0, 1, 1001)
+
+best_alpha = float()
+r2_train_simple_mix = float()
+
+for alpha in alphas_to_try:
+    
+    mix = alpha * X_train_level2[:,0] + (1 - alpha) * X_train_level2[:,1]
+    r2_step = r2_score(y_train_level2, mix)
+    
+    if r2_step > r2_train_simple_mix:
+        best_alpha = alpha
+        r2_train_simple_mix = r2_step
+        
+print('Best alpha: %f; Corresponding r2 score on train: %f' % (best_alpha, r2_train_simple_mix))
+
+
+
+#use alpha to build test set prediction
+lr.fit(X_train, y_train)
+model = lgb.train(lgb_params, lgb.Dataset(X_train, label=y_train), 100)
+
+test_preds = best_alpha * lr.predict(X_test) + (1 - best_alpha) * model.predict(X_test)
+
+r2_test_simple_mix = r2_score(y_test, test_preds)
+
+print('Test R-squared for simple mix is %f' % r2_test_simple_mix)
+mean_squared_error(y_test, test_preds)
+
+
+
+
+
+
+X_train = pd.concat([X_test, X_train], axis = 0)
+y_train = np.concatenate((y_test, y_train), axis = 0)
+
+for cur_block_num in [28, 29, 30, 31, 32, 33]:
+    
+    print(cur_block_num)
+    
+    '''
+        1. Split `X_train` into parts
+           Remember, that corresponding dates are stored in `dates_train` 
+        2. Fit linear regression 
+        3. Fit LightGBM and put predictions          
+        4. Store predictions from 2. and 3. in the right place of `X_train_level2`. 
+           You can use `dates_train_level2` for it
+           Make sure the order of the meta-features is the same as in `X_test_level2`
+    '''      
+    
+    X_train_block = X_train[dates_train < cur_block_num]
+    y_train_block = y_train[dates_train < cur_block_num]
+    X_test_block = X_train[dates_train == cur_block_num]
+    y_test_block = y_train[dates_train == cur_block_num]
+
+    lr.fit(X_train_block.values, y_train_block)
+    pred_lr = lr.predict(X_test_block.values)
+    print('Test R-squared for linreg is %f' % r2_score(y_test_block, pred_lr))
+
+    model = lgb.train(lgb_params, lgb.Dataset(X_train_block.values, label=y_train_block), 100)
+    pred_lgb = model.predict(X_test_block.values)
+
+    print('Test R-squared for LightGBM is %f' % r2_score(y_test_block, pred_lgb))
+
+    X_train_level2[dates_train_level2==cur_block_num] = np.c_[pred_lr, pred_lgb]
+
+
+print(X_train_level2.mean(axis=0))
+
+
+
+
+
+
+
+#________________________________________
+
+
+
+model = lgb.train(lgb_params, lgb.Dataset(X_train, label=y_train), 100)
+pred_lgb_segm = model.predict(X_train)
+print('Train R-squared for LightGBM is %f' % r2_score(y_train_segm, pred_lgb_segm))
+#check mse
+mean_squared_error(y_train_segm, pred_lgb_segm)
+
+
+#predict y_valueadn create a data frame that will be updated with clarifying predictions
+submission = model.predict(X_to_predict)
+#submission = lr.predict(X_to_predict)
+submission = pd.DataFrame(submission)
+submission.index = X_to_predict.index
+submission = pd.merge(submission, all_data.loc[: ,['shop_id', 'item_id']], 
+                      how = 'left', left_index=True, right_index=True)
+mean_squared_error(y_test, submission[0])
+
+
+#START UPDATING SEGMENTS
+sales = transactions[transactions['shop_id'].isin([24,58,15,26,7,38,19,21,43,22,56,16,29,53,6,18,25, 27, 28,31,35,42,46,47,50,54,57])]
+
+index_cols = ['shop_id', 'item_id', 'date_block_num']
+
+#build data file
+all_data = get_all_data()
+
+#set shift for number of months to lag
+shift_range = [1, 2, 3, 4, 5, 12]
+
+#create lags for the given data set
+all_data = get_lags(all_data, shift_range)
+
+#remove unnecessary price columns
+all_data = clean_price(all_data)
+
+# Drop old data from 2013
+all_data = all_data[all_data['date_block_num'] >= 12] 
+
+# List of all lagged features
+fit_cols = [col for col in all_data.columns if col[-1] in [str(item) for item in shift_range]] 
+# We will drop these at fitting stage
+to_drop_cols = list(set(list(all_data.columns)) - (set(fit_cols)|set(index_cols))) + ['date_block_num'] 
+
+# Category for each item
+item_category_mapping = items[['item_id','item_category_id']].drop_duplicates()
+
+all_data = pd.merge(all_data, item_category_mapping, how='left', on='item_id')
+all_data = downcast_dtypes(all_data)
+del(col, item)
+gc.collect();
+
+#add solitary features after lagged features
+all_data = add_solitary_features(all_data)
+
+# Save `date_block_num`, as we can't use them as features, but will need them to split the dataset into parts 
+dates = all_data['date_block_num']
+
+last_block = dates.max()
+print('Test `date_block_num` is %d' % last_block)
+
+
+X_train_segm,X_test,y_train,y_test = prepare_tt_sets(all_data, dates, last_block)
+
+#X_train_segm, y_train_segm, X_to_predict = prepare_final_set(all_data)
+
+lgb_params = {
+               'feature_fraction': 0.3,
+               'metric': 'rmse',
+               'nthread':1, 
+               'min_data_in_leaf': 1, 
+               'bagging_fraction': 0.3, 
+               'learning_rate': 0.03, 
+               'objective': 'mse', 
+               'bagging_seed': 2**7, 
+               'num_leaves': 2**7,
+               'bagging_freq':1,
+               'verbose':0,
+               'num_iterations':130,
+               'max_depth':11
+              }
+
+#fine-tuned predictions for data segments will be done below
+model = lgb.train(lgb_params, lgb.Dataset(X_train_segm, label=y_train_segm), 100)
+pred_lgb_segm = model.predict(X_train_segm)
+print('Train R-squared for LightGBM is %f' % r2_score(y_train_segm, pred_lgb_segm))
+#check mse
+mean_squared_error(y_train_segm, pred_lgb_segm)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -340,6 +613,7 @@ pred_lr_train = lr.predict(X_train.values)
 
 print('Train R-squared for linreg is %f' % r2_score(y_train, pred_lr_train))
 print('Test R-squared for linreg is %f' % r2_score(y_test, pred_lr_test))
+mean_squared_error(y_test, pred_lr_test)
 
 
 #RUN LGB MODEL
@@ -366,8 +640,7 @@ pred_lgb_test = model.predict(X_test)
 
 print('Train R-squared for LightGBM is %f' % r2_score(y_train, pred_lgb_train))
 print('Test R-squared for LightGBM is %f' % r2_score(y_test, pred_lgb_test))
-
-
+mean_squared_error(y_test, pred_lgb_test)
 
 
 
@@ -550,21 +823,26 @@ print('Train R-squared for linreg is %f' % r2_score(y_train_segm, pred_lr_segm))
 model = lgb.train(lgb_params, lgb.Dataset(X_train_segm, label=y_train_segm), 100)
 pred_lgb_segm = model.predict(X_train_segm)
 print('Train R-squared for LightGBM is %f' % r2_score(y_train_segm, pred_lgb_segm))
+#check mse
+mean_squared_error(y_train_segm, pred_lgb_segm)
+
 
 #predict y_value
 submission = model.predict(X_to_predict)
-submission = lr.predict(X_to_predict)
+#submission = lr.predict(X_to_predict)
 submission = pd.DataFrame(submission)
 submission.index = X_to_predict.index
-submission = pd.merge(submission, all_data.loc[: ,['shop_id', 'item_id']], how = 'left', left_index=True, right_index=True)
+submission = pd.merge(submission, all_data.loc[: ,['shop_id', 'item_id']], 
+                      how = 'left', left_index=True, right_index=True)
+
+
+
 
 submission = pd.merge(test, submission, how = 'left', on=['shop_id', 'item_id']).fillna(999)
 submission[submission[0] == 999].count()
 
 #run model
 
-#check mse
-mean_squared_error(y_train_segm, pred_lgb_segm)
 
 
 #upload results to the correct segment of test
