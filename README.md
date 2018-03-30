@@ -33,5 +33,5 @@ Next (in this order):
 *  additional features
 *  additional model (maybe)
 
-[update mar 29: i have identified the problem that impedes better prediction: massive one-off items concentrated in the stores that i expected. i will take care of them now]
+[update mar 29: i have identified the problem that impedes better prediction: massive one-off items concentrated in the stores that i expected. i clipped them which massively improved the score along with the leaderboard position. Plenty more tricks to try]
 

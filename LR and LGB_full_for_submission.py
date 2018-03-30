@@ -295,6 +295,11 @@ all_data = clean_price(all_data)
 # Drop old data from 2013
 all_data = all_data[all_data['date_block_num'] >= 12] 
 
+#clip count outliers at 60
+lowerbound, upperbound = np.percentile(all_data['target'], [0,99.98])
+all_data['target'] = np.clip(all_data['target'], lowerbound, upperbound)
+all_data['target_lag_1'] = np.clip(all_data['target_lag_1'], lowerbound, upperbound)
+
 # List of all lagged features
 fit_cols = [col for col in all_data.columns if col[-1] in [str(item) for item in shift_range]] 
 # We will drop these at fitting stage
@@ -327,11 +332,11 @@ X_train,X_test,y_train,y_test = prepare_tt_sets(all_data, dates, last_block)
 #RUN LINEAR REGRESSION
 lr = LinearRegression()
 lr.fit(X_train.values, y_train)
-pred_lr_test = lr.predict(X_test.values)
-#pred_lr_train = lr.predict(X_train.values)
+#pred_lr_test = lr.predict(X_test.values)
+pred_lr_train = lr.predict(X_train.values)
 
 print('Train R-squared for linreg is %f' % r2_score(y_train, pred_lr_train))
-print('Test R-squared for linreg is %f' % r2_score(y_test, pred_lr_test))
+#print('Test R-squared for linreg is %f' % r2_score(y_test, pred_lr_test))
 mean_squared_error(y_test, pred_lr_test)
 
 
@@ -354,11 +359,11 @@ lgb_params = {
 
 #fine-tuned predictions for data segments will be done below
 model = lgb.train(lgb_params, lgb.Dataset(X_train, label=y_train), 100)
-#pred_lgb_train = model.predict(X_train)
-pred_lgb_test = model.predict(X_test)
+pred_lgb_train = model.predict(X_train)
+#pred_lgb_test = model.predict(X_test)
 
 print('Train R-squared for LightGBM is %f' % r2_score(y_train, pred_lgb_train))
-print('Test R-squared for LightGBM is %f' % r2_score(y_test, pred_lgb_test))
+#print('Test R-squared for LightGBM is %f' % r2_score(y_test, pred_lgb_test))
 mean_squared_error(y_test, pred_lgb_test)
 
 
