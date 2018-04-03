@@ -11,7 +11,7 @@ In addition, the original data was not feature-rich, the models performed poorly
 
 ## Architecture
 
-In this case model stacking will be a likely approach as the results appeared promising based on a small sample, and given the disparity of the data set. So far, I have fitted linear regression model, gradient boosted decision tree model and an LSTM. LN and GBDT are built on the same feature set. LSTM is built on a smaller feature set
+In this case model stacking will be a likely approach as the results appeared promising based on a small sample, and given the disparity of the data set. So far, I have fitted linear regression model, gradient boosted decision tree model and an LSTM. LN and GBDT are built on the same feature set. LSTM has built on a smaller feature set
 
 ## Data cleaning
 
@@ -26,12 +26,10 @@ I also built an LSTM script, which I don't expect to be used across the full dat
 
 ## Results
 
-So far I have trained the models on the full data set, without trying to segment it, which would be my next thing to do. I also tried stacking as simple weighted optimization of two models' predictions and a linear regression of meta features produced by the models. Neither proved to be productive yet: the weighting came all in favor of GBDT, and stacked model gave a worse overall outcome. 
+I initially considered segmenting the data (i.e. there are chunks of data that perform radically differently, although clipping the outliers appears to take care of the problem). My intent was to build the 'good' set and then update it with selected predictions from the consistent outliers in the 'bad' set. I was surprised to learn that the results got a lot worse compared to my running the predictions based on the full dataset (I picked a handful of high-volume items which came consistently high in the previous months, built separate predictions for them, and updated the results). I conclude that the test set has these items clipped. This makes the test data likely inconsistent with the train data, but actually simplifies things going forward as I will deal with a full dataset at the same time, and basically focus on the correct outlier cut off and model training and maybe add some new features. 
 
-Next (in this order):
-*  segmenting training data and deciding how to treat outliers (I have clipped them, but I think many should be totally removed as one-off events)
-*  additional features
-*  additional model (maybe)
+At any rate, I'm #16 on the leaderboard with 0.976 RMSE, which puts in in the ballpark where I wanted to get. I will continue updating the model if time permits, and basically try to get into the top 10 just to make the point.
 
-[update mar 29: i have identified the problem that impedes better prediction: massive one-off items concentrated in the stores that i expected. i clipped them which massively improved the score along with the leaderboard position, with plenty more tricks to try]
+Also, the results are currently based on GBDT alone. I tried stacking as simple weighted optimization of two models' predictions and a linear regression of meta features produced by the models. Neither proved to be productive yet, as GBDT does better solo. An addition of another model may change things.
+
 
