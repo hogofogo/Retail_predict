@@ -15,7 +15,7 @@ In this case model stacking will be a likely approach as the results appeared pr
 
 ## Data cleaning
 
-Retail_exploratory.pynb.ipynb or Retail_exploratory.pynb.pdf explains what has been done and why. The examples include: clipping outliers, generating new features including time-lagged features and target encodings, running a tSNE visualization for identifying cross-store cluster similarities, and normalization.
+Retail_exploratory.ipynb or explains what has been done and why. The examples include: clipping outliers, generating new features including time-lagged features and target encodings, running a tSNE visualization for identifying cross-store cluster similarities, and normalization.
 
 
 ## Training
@@ -26,10 +26,9 @@ I also built an LSTM script, which I don't expect to be used across the full dat
 
 ## Results
 
-I initially considered segmenting the data (i.e. there are chunks of data that perform radically differently, although clipping the outliers appears to take care of the problem). My intent was to build the 'good' set and then update it with selected predictions from the consistent outliers in the 'bad' set. I was surprised to learn that the results got a lot worse compared to my running the predictions based on the full dataset (I picked a handful of high-volume items which came consistently high in the previous months, built separate predictions for them, and updated the results). I conclude that the test set has these items clipped. This makes the test data likely inconsistent with the train data, but actually simplifies things going forward as I will deal with a full dataset at the same time, and basically focus on the correct outlier cut off and model training and maybe add some new features. 
+I initially considered segmenting the data (i.e. there are chunks of data that perform radically differently, although clipping the outliers appears to take care of the problem). My intent was to build the 'good' set and then update it with selected predictions from the consistent outliers in the 'bad' set. I was surprised to learn that the results got a lot worse compared to my running the predictions based on the full dataset (I picked a handful of high-volume items which came consistently high in the previous months, built separate predictions for them, and updated the results). I conclude that the test set has these items clipped. This makes the test data likely inconsistent with the train data, but actually simplifies things going forward as I will deal with a full dataset at the same time, and basically focus on the correct outlier clip threshold and model training and maybe add some new features. 
 
-At any rate, I'm #16 on the leaderboard with 0.976 RMSE, which puts in in the ballpark where I wanted to get. I will continue updating the model if time permits.
+I got the result under 0.97 RMSE which was my goal. I think the model might benefit further from adding KNN features which I may do later.
 
-Also, the results are currently based on GBDT alone. I tried stacking as simple weighted optimization of two models' predictions and a linear regression of meta features produced by the models. Neither proved to be productive yet, as GBDT does better solo. An addition of another model may change things.
-
+Also, the results are currently based on GBDT alone, or with a very small weight of ridge model. I tried stacking as simple weighted optimization of two models' predictions and a linear regression of meta features produced by the models. Neither proved to be productive yet, as GBDT does better solo. I will also try deeper stacking (two models didn't work well enough) and update.
 
